@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+/* KP Chai Map Markers */
+.kp-marker-wrapper {
+  position: relative;
+  width: 0;
+  height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  cursor: pointer;
+}
+.kp-teardrop {
+  width: 36px;
+  height: 36px;
+  background: #f59e0b;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: absolute;
+  bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: -2px 5px 15px rgba(0,0,0,0.5);
+  border: 2px solid white;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.kp-teardrop-inner {
+  transform: rotate(45deg);
+  font-size: 15px;
+  line-height: 1;
+}
+.kp-dot {
+  width: 7px;
+  height: 7px;
+  background: #f59e0b;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  border: 1.5px solid white;
+}
+.kp-marker-wrapper:hover .kp-teardrop {
+  transform: rotate(-45deg) scale(1.2);
+  background: #fbbf24;
+}
+/* Label bubble above pin */
+.kp-label {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.95);
+  color: #1a3a2e;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border: 1px solid #f59e0b;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.kp-marker-wrapper:hover .kp-label {
+  opacity: 1;
+}
+
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+@layer base {
+  :root {
+    --background: #000000;
+    --foreground: #ffffff;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
