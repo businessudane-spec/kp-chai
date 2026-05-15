@@ -391,14 +391,36 @@ export default function Home() {
       const initMapbox = async () => {
         const mapboxgl = (await import('mapbox-gl')).default;
         if (!section6Ref.current) return;
+
+        // Check WebGL support before trying to init
+        if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
+          console.warn('KP Chai: WebGL not supported — map section will be hidden.');
+          const mapEl = document.getElementById('kp-globe-map');
+          if (mapEl) {
+            mapEl.innerHTML = `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1628;color:white;gap:12px;">
+              <div style="font-size:48px">🗺️</div>
+              <p style="font-size:18px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;">Map coming soon</p>
+              <p style="font-size:13px;opacity:0.5">WebGL required — please enable hardware acceleration in your browser</p>
+            </div>`;
+          }
+          return;
+        }
+
         (window as any).__kpMapboxgl = mapboxgl; // store for marker creation
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-        const map = new mapboxgl.Map({
-          container: 'kp-globe-map',
-          style: 'mapbox://styles/mapbox/satellite-streets-v12',
-          center: [30, 15], zoom: 1.5, pitch: 0, bearing: 0,
-          projection: 'globe' as any, interactive: false,
-        });
+        let map: any;
+        try {
+          map = new mapboxgl.Map({
+            container: 'kp-globe-map',
+            style: 'mapbox://styles/mapbox/satellite-streets-v12',
+            center: [30, 15], zoom: 1.5, pitch: 0, bearing: 0,
+            projection: 'globe' as any, interactive: false,
+            failIfMajorPerformanceCaveat: false, // allow software WebGL fallback
+          });
+        } catch (e) {
+          console.error('KP Chai: Mapbox failed to initialize:', e);
+          return;
+        }
         mapInstance = map;
         map.on('style.load', () => {
           (map as any).setFog({
@@ -419,6 +441,20 @@ export default function Home() {
         };
       };
       initMapbox();
+
+      // SECTION 6 - Location cards stagger in on scroll
+      gsap.to('.location-card', {
+        opacity: 1,
+        y: 0,
+        duration: 0.7,
+        ease: 'power3.out',
+        stagger: 0.12,
+        scrollTrigger: {
+          trigger: section6Ref.current,
+          start: 'top 65%',
+          toggleActions: 'play none none none',
+        }
+      });
 
       // FOOTER ANIMATION
       gsap.fromTo(
@@ -677,31 +713,96 @@ export default function Home() {
             </button>
           </div>
         </div>
-        {/* SECTION 6 - MAPBOX GLOBE */}
-        <div ref={section6Ref} className="relative h-screen w-full overflow-hidden">
+        {/* SECTION 6 - LOCATIONS */}
+        <div ref={section6Ref} className="relative min-h-screen w-full overflow-hidden bg-[#060d1f] flex flex-col items-center justify-center py-24 px-4">
 
-          {/* Mapbox container — fills entire section */}
-          <div id="kp-globe-map" className="absolute inset-0 w-full h-full" />
+          {/* Hidden mapbox container — still initialized if WebGL available */}
+          <div id="kp-globe-map" className="absolute inset-0 w-full h-full z-0" />
 
-          {/* Top overlay heading */}
-          <div className="absolute top-10 left-0 right-0 text-center z-20 pointer-events-none">
-            <p className="text-amber-400 uppercase tracking-[0.35em] text-xs font-bold mb-2 drop-shadow-lg">
-              Find Us Near You
-            </p>
-            <h2 className={`${fraunces.className} text-4xl md:text-6xl font-black text-white drop-shadow-2xl`}>
-              Our Locations
-            </h2>
+          {/* Animated starfield background */}
+          <div className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
+            {[...Array(60)].map((_, i) => (
+              <div key={i}
+                className="absolute rounded-full bg-white"
+                style={{
+                  width: `${Math.random() * 2 + 1}px`,
+                  height: `${Math.random() * 2 + 1}px`,
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  opacity: Math.random() * 0.7 + 0.1,
+                  animation: `pulse ${Math.random() * 3 + 2}s ease-in-out ${Math.random() * 2}s infinite alternate`,
+                }}
+              />
+            ))}
           </div>
 
-          {/* Bottom info bar */}
-          <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
-            <div className="bg-gradient-to-t from-black/70 to-transparent px-8 py-6 text-center">
-              <p className="text-white/70 text-sm font-medium">
-                5 locations across the UAE — hover any pin to see details
-              </p>
-            </div>
+          {/* Glowing globe SVG */}
+          <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none opacity-10">
+            <svg viewBox="0 0 400 400" className="w-[600px] h-[600px]">
+              <circle cx="200" cy="200" r="190" fill="none" stroke="#f59e0b" strokeWidth="1" />
+              <circle cx="200" cy="200" r="150" fill="none" stroke="#f59e0b" strokeWidth="0.5" strokeDasharray="4 8" />
+              <circle cx="200" cy="200" r="100" fill="none" stroke="#f59e0b" strokeWidth="0.5" strokeDasharray="2 6" />
+              <ellipse cx="200" cy="200" rx="190" ry="60" fill="none" stroke="#f59e0b" strokeWidth="0.5" />
+              <ellipse cx="200" cy="200" rx="190" ry="120" fill="none" stroke="#f59e0b" strokeWidth="0.5" />
+              <line x1="10" y1="200" x2="390" y2="200" stroke="#f59e0b" strokeWidth="0.5" />
+              <line x1="200" y1="10" x2="200" y2="390" stroke="#f59e0b" strokeWidth="0.5" />
+            </svg>
           </div>
 
+          {/* Heading */}
+          <div className="relative z-10 text-center mb-16">
+            <p className="text-amber-400 uppercase tracking-[0.35em] text-xs font-bold mb-3">Find Us Near You</p>
+            <h2 className={`${fraunces.className} text-4xl md:text-6xl font-black text-white drop-shadow-2xl`}>Our Locations</h2>
+            <div className="w-24 h-1 bg-amber-500 mx-auto mt-4 rounded-full" />
+          </div>
+
+          {/* Location Cards Grid */}
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
+            {locationsData.map((loc, i) => (
+              <div
+                key={i}
+                className="location-card group relative bg-white/5 backdrop-blur-sm border border-amber-500/20 rounded-2xl p-6 hover:border-amber-500/60 hover:bg-white/10 transition-all duration-500 cursor-pointer"
+                style={{ opacity: 0, transform: 'translateY(40px)' }}
+              >
+                {/* Pulse dot */}
+                <div className="absolute top-5 right-5 flex items-center justify-center">
+                  <span className="absolute w-4 h-4 rounded-full bg-amber-400 opacity-30 animate-ping" />
+                  <span className="w-3 h-3 rounded-full bg-amber-400 relative z-10" />
+                </div>
+
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-2xl">☕</span>
+                  <h3 className="text-white font-bold text-lg leading-tight group-hover:text-amber-400 transition-colors">
+                    {loc.name}
+                  </h3>
+                </div>
+
+                <p className="text-white/50 text-sm leading-relaxed mb-5">{loc.address}</p>
+
+                <div className="flex gap-3">
+                  <a
+                    href={loc.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-black text-xs font-bold rounded-full hover:bg-amber-400 transition-all hover:scale-105 pointer-events-auto"
+                  >
+                    📍 Directions
+                  </a>
+                  <a
+                    href={loc.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 border border-green-400/50 text-green-400 text-xs font-bold rounded-full hover:bg-green-400/10 transition-all hover:scale-105 pointer-events-auto"
+                  >
+                    💬 WhatsApp
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom gradient fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#1a0f08] to-transparent z-10 pointer-events-none" />
         </div>
 
         {/* SECTION 7 - FOOTER */}
